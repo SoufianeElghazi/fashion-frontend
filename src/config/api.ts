@@ -3,6 +3,7 @@ const API_CONFIG = {
   // URL de base - à changer selon l'environnement
   BASE_URL: import.meta.env.VITE_API_URL || 'https://fashion-backend-nrg5.onrender.com',
   
+  
   // Endpoints
   ENDPOINTS: {
     CREATE_QUOTE: '/api/quotes',
