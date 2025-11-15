@@ -18,8 +18,9 @@ interface ServicesProps {
 const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [imageCache, setImageCache] = useState<Record<string, string[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [clickedImage, setClickedImage] = useState<string | null>(null);
-  const { setSelectedModelImage, scrollToQuoteForm, showToast } = useQuote();
+  const { setSelectedModelImage, scrollToQuoteForm } = useQuote();
 
   const translations = {
     en: {
@@ -69,7 +70,8 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
           features: ['Tailored fit', 'Premium fabrics', 'Seasonal styles', 'Professional finish']
         }
       ],
-      viewModels: 'View our models'
+      viewModels: 'View our models',
+      loading: 'Loading...'
     },
     ar: {
       title: '✨ خدمتنا و موديلاتنا',
@@ -118,7 +120,8 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
           features: ['قصة مفصلة', 'أقمشة فاخرة', 'موديلات موسمية', 'تشطيب احترافي']
         }
       ],
-      viewModels: 'عرض الموديلات'
+      viewModels: 'عرض الموديلات',
+      loading: 'جاري التحميل...'
     }
   };
 
@@ -148,11 +151,9 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
       setClickedImage(null);
       setSelectedService(null);
       
-      // Animation de scroll avec délai
       setTimeout(() => {
         scrollToQuoteForm();
         
-        // Flash effect sur le formulaire
         const quoteSection = document.getElementById('quote-form-section');
         if (quoteSection) {
           quoteSection.classList.add('highlight-flash');
@@ -184,52 +185,44 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
     'سترات وجيليهات': 'VestesGilet'
   };
 
-  // Check if image exists by attempting to load it
-  const checkImageExists = async (url: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-  };
-
-  // Load available images for a category
-  const loadCategoryImages = async (folderName: string): Promise<string[]> => {
-    const images: string[] = [];
-    let i = 1;
-    
-    // Try up to 50 images (adjust as needed)
-    while (i <= 50) {
-      const path = `/models/${folderName}/${i}.png`;
-      const exists = await checkImageExists(path);
-      
-      if (exists) {
-        images.push(path);
-        i++;
-      } else {
-        break; // Stop when we hit the first missing image
-      }
-    }
-    
-    return images;
-  };
-
-  // Load images for all categories on mount
+  // Load manifest from root
   useEffect(() => {
-    const loadAllImages = async () => {
-      const cache: Record<string, string[]> = {};
-      
-      for (const folder of Object.values(categoryMap)) {
-        if (!cache[folder]) {
-          cache[folder] = await loadCategoryImages(folder);
+    const loadManifest = async () => {
+      try {
+        console.log('🔍 Chargement du manifeste...');
+        
+        // Charger depuis la racine du projet
+        const response = await fetch('/models-manifest.json');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const manifest = await response.json();
+        console.log('✅ Manifeste chargé:', manifest);
+        
+        setImageCache(manifest);
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement du manifeste:', error);
+        
+        // Fallback: essayer de charger quelques images par défaut
+        const fallbackManifest = {
+          Blouses: ['/models/Blouses/1.png', '/models/Blouses/2.png', '/models/Blouses/3.png', '/models/Blouses/4.png'],
+          Dresses: ['/models/Dresses/1.png', '/models/Dresses/2.png', '/models/Dresses/3.png', '/models/Dresses/4.png', '/models/Dresses/5.png'],
+          Hijabis: ['/models/Hijabis/1.png'],
+          Kids: ['/models/Kids/1.png', '/models/Kids/2.png'],
+          Pyjamas: ['/models/Pyjamas/1.png'],
+          VestesGilet: ['/models/VestesGilet/1.png', '/models/VestesGilet/2.png']
+        };
+        
+        console.log('🔄 Utilisation du manifeste de secours');
+        setImageCache(fallbackManifest);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setImageCache(cache);
     };
 
-    loadAllImages();
+    loadManifest();
   }, []);
 
   // Build services with dynamically loaded images
@@ -266,75 +259,85 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
           </p>
         </div>
 
-        {/* Models as service cards */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {servicesWithImages.map((service, index) => (
-            <div
-              key={index}
-              className={`p-8 rounded-3xl backdrop-blur-md border transition-transform transform hover:scale-105 ${
-                isDark
-                  ? "bg-white/10 border-purple-500/20"
-                  : "bg-white/80 border-purple-200"
-              }`}
-            >
-              {/* Icon */}
-              <div className="flex flex-col items-center mb-6">
-                <div className="text-5xl mb-4">{service.icon}</div>
-                <h3
-                  className={`text-2xl font-bold mb-2 ${
-                    isDark ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  {service.title}
-                </h3>
-                <p
-                  className={`text-lg mb-4 ${
-                    isDark ? "text-gray-300" : "text-gray-600"
-                  }`}
-                >
-                  {service.description}
-                </p>
-                <p
-                  className={`text-xl font-bold mb-4 ${
-                    isDark ? "text-purple-300" : "text-purple-700"
-                  }`}
-                >
-                  {service.price}
-                </p>
-              </div>
-
-              {/* Features List */}
-              <div className="space-y-2">
-                {service.features.map((feature, featureIndex) => (
-                  <div
-                    key={featureIndex}
-                    className="flex items-center space-x-2"
-                  >
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span
-                      className={`text-sm ${
-                        isDark ? "text-gray-300" : "text-gray-600"
-                      }`}
-                    >
-                      {feature}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA Button */}
-              <button
-                onClick={() => setSelectedService(service)}
-                className="w-full mt-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
+        {/* Loading indicator */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+            <p className={`mt-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              {t.loading}
+            </p>
+          </div>
+        ) : (
+          /* Models as service cards */
+          <div className="grid md:grid-cols-3 gap-8">
+            {servicesWithImages.map((service, index) => (
+              <div
+                key={index}
+                className={`p-8 rounded-3xl backdrop-blur-md border transition-transform transform hover:scale-105 ${
+                  isDark
+                    ? "bg-white/10 border-purple-500/20"
+                    : "bg-white/80 border-purple-200"
+                }`}
               >
-                {t.viewModels}
-                {service.images.length > 0 && (
-                  <span className="ml-2 text-xs">({service.images.length})</span>
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
+                {/* Icon */}
+                <div className="flex flex-col items-center mb-6">
+                  <div className="text-5xl mb-4">{service.icon}</div>
+                  <h3
+                    className={`text-2xl font-bold mb-2 ${
+                      isDark ? "text-white" : "text-gray-800"
+                    }`}
+                  >
+                    {service.title}
+                  </h3>
+                  <p
+                    className={`text-lg mb-4 ${
+                      isDark ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    {service.description}
+                  </p>
+                  <p
+                    className={`text-xl font-bold mb-4 ${
+                      isDark ? "text-purple-300" : "text-purple-700"
+                    }`}
+                  >
+                    {service.price}
+                  </p>
+                </div>
+
+                {/* Features List */}
+                <div className="space-y-2">
+                  {service.features.map((feature, featureIndex) => (
+                    <div
+                      key={featureIndex}
+                      className="flex items-center space-x-2"
+                    >
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span
+                        className={`text-sm ${
+                          isDark ? "text-gray-300" : "text-gray-600"
+                        }`}
+                      >
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  onClick={() => setSelectedService(service)}
+                  className="w-full mt-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
+                >
+                  {t.viewModels}
+                  {service.images.length > 0 && (
+                    <span className="ml-2 text-xs">({service.images.length})</span>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal */}
@@ -415,7 +418,7 @@ const Services: React.FC<ServicesProps> = ({ isDark, isArabic }) => {
         </div>
       )}
 
-      {/* Confirmation Modal - Plus attractif */}
+      {/* Confirmation Modal */}
       {clickedImage && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4 animate-fadeIn">
           <div
