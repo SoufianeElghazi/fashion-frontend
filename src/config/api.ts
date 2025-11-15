@@ -10,7 +10,7 @@ const API_CONFIG = {
   },
   
   // Timeout en millisecondes
-  TIMEOUT: 30000,
+  TIMEOUT: 60000,
 };
 
 // Fonction helper pour faire des requêtes
