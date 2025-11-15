@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/generate-image-manifest.cjs",
+    "generate-manifest": "node scripts/generate-image-manifest.cjs",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
